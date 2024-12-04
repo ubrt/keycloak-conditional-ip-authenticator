@@ -15,7 +15,7 @@ services:
       - '8080:8080'
       - '8787:8787'
     volumes:
-      - kc_dataa:/opt/keycloak/data
+      - kc_data:/opt/keycloak/data
       - ./target/ip-conditional-authenticator-1.0-SNAPSHOT.jar:/opt/keycloak/providers/ip-conditional-authenticator-1.0-SNAPSHOT.jar
     extra_hosts:
       - "host.docker.internal:host-gateway"
