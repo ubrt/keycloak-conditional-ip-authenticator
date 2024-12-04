@@ -1,0 +1,53 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Match tags that start with 'v'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build with Maven
+        run: mvn clean package
+
+      - name: Rename JAR with Tag and Commit Hash
+        id: rename-jar
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG=$(git describe --tags --exact-match)
+          JAR_FILE=$(ls target/*.jar | head -n 1)
+          NEW_JAR="ip-conditional-authenticator-${TAG}-${SHORT_SHA}.jar"
+          mv $JAR_FILE target/$NEW_JAR
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_ENV
+          echo "jar_name=$NEW_JAR" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            Automated release for tag ${{ github.ref_name }} and commit ${{ env.short_sha }}.
+          artifacts: target/${{ env.jar_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          allowUpdates: true
